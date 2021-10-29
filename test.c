@@ -52,7 +52,7 @@ void generate_tests(int num_tests, int MAX_VALUE, int size, double error_margin,
 
 int main(){
     srand(time(NULL));
-    int SIZE = 1000;
+    int SIZE = 350;
     int MAX_VALUE = 100;
     int num_test = 1;
     double error_margin = 0.001;

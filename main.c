@@ -56,10 +56,12 @@ void print_square(double *to_print, int size){
 
 bool within_error(double *array, double *new_array, double error_margin, int size){
     int index;
+    double difference;
     for(int i = 1; i < size - 1; i++){
         for(int j = 1; j < size - 1; j++){
             index = get_array_index(i, j, size);
-            if((array[index]*array[index] - new_array[index]*new_array[index]) >= error_margin){
+            difference = (array[index]*array[index] - new_array[index]*new_array[index]);
+            if(difference*difference >= error_margin*error_margin){
                 return false;
             }
         }
