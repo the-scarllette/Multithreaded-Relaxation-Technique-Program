@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig authType="PASSWORD" host="cm30225.hpc.bath.ac.uk" id="270e7fa6-d79a-4a6c-bb39-9ebd9251e2d8" port="22" nameFormat="DESCRIPTIVE" username="re412" />
+    </configs>
+  </component>
+</project>

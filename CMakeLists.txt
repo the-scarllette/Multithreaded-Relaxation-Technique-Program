@@ -3,4 +3,4 @@ project(ParallelCoursework1)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(ParallelCoursework1 main.c test.c)
+add_executable(ParallelCoursework1 sequentialversion.c test.c parallelcode.c)

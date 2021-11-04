@@ -9,6 +9,7 @@ void average_square(double *array, double *new_array, int size);
 void iterate(double *array1, double *array2, int size, double error_margin, bool print_iterations);
 int get_array_index(int i, int j, int size);
 
+/*
 void random_array(double *to_fill, int MAX_VALUE, int size){
     int num, den;
     for(int i = 0; i < size; i++){
@@ -60,4 +61,4 @@ int main(){
     generate_tests(num_test, MAX_VALUE, SIZE, error_margin, false, false);
 
     return 0;
-}
+}*/
