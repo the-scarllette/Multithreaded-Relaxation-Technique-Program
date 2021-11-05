@@ -2,15 +2,14 @@
 #include <stdbool.h>
 #include <malloc.h>
 #include <time.h>
-#include <pthread.h>
-/*
- * create struct
- * pass pointer to thread
- * extract struct values
- * close threads
- */
 
-struct
+struct doublesArraySection{
+    int size;
+    double *array;
+    double *newarray;
+    int row_start;
+    int num_rows;
+} doublesArraySection;
 
 int rand(void);
 void srand(unsigned int seed);
@@ -23,21 +22,17 @@ double average_value(double *array, int index, int size){
     return (array[index - 1] + array[index + 1] + array[index - size] + array[index + size])/4.0;
 }
 
-void average_section(double, *array, double *new_array, int size, int start, int end){
-for{int i = start, i <= end, i++}{
-new_array[i] = average_value(array, i, size);
-}
-}
-
-void average_square(double *array, double *new_array, int size){
+void* average_section(void *sectionaddress){
+    struct doublesArraySection *arraySection = sectionaddress;
     int index;
-    for(int i = 1; i < size - 1; i++){
-        for(int j = 1;j < size - 1; j++){
-            index = get_array_index(i, j, size);
-            new_array[index] = average_value(array, index, size);
+    for(int i = (*arraySection).row_start; i < (*arraySection).row_start + (*arraySection).num_rows; i++){
+        for(int j = 1; j < (*arraySection).size; j++){
+            index = get_array_index(i, j, (*arraySection).size);
+            (*arraySection).newarray[index] = average_value((*arraySection).array, index, (*arraySection).size);
         }
     }
 }
+
 
 void copy_boundary(double *array, double *new_array, int size){
     //copying top edge
@@ -90,25 +85,40 @@ bool within_error(double *array, double *new_array, double error_margin, int siz
     return true;
 }
 
-void iterate(int num_threads, double *array1, double *array2, int size, double error_margin, bool print_iterations){
+void partition_array(struct doublesArraySection *sections, int num_sections, int array_size){
+    int rows_per_thread = (array_size - 2)/num_sections;
+    for(int k = 0; k < num_sections; k++){
+        sections[k].size = array_size;
+        sections[k].row_start = k*rows_per_thread + 1;
+        sections[k].num_rows = rows_per_thread;
+    }
+    sections[num_sections - 1].num_rows = (array_size - 1) - sections[num_sections - 1].row_start;
+    for(int k = 0; k < num_sections; k++){
+        printf("Section %d starts on row %d and covers %d rows\n", k, sections[k].row_start, sections[k].num_rows);
+    }
+}
+
+void iterate(int num_threds, double *array1, double *array2, int size, double error_margin, bool print_iterations){
     copy_boundary(array1, array2, size);
 
     bool keep_iterating = true;
     int k = 0;
-
-    //Creating Threads
-    pthread_t *threads = malloc(num_threads*sizeof(pthread_t));
-
+    struct doublesArraySection *sections = malloc(num_threds*sizeof(doublesArraySection));
+    partition_array(sections, num_threds, size);
     while(keep_iterating){
-        //Creating Threads
-        for{int i = 0; i < num_threads; i++}{
-            pthread_create(&threads[i], NULL, average_section, );
+        if(k % 500 == 0){
+            printf("iteration: %d\n", k);
         }
 
-        average_square(array1, array2, size);
+        for(int i = 0; i < num_threds; i++){
+            sections[i].array = array1;
+            sections[i].newarray = array2;
+            average_section(&sections[i]);
+        }
         k++;
         if(within_error(array1, array2, error_margin, size)){
             printf("%d iterations\n", k);
+            free(sections);
             return;
         }
 
@@ -117,10 +127,15 @@ void iterate(int num_threads, double *array1, double *array2, int size, double e
             print_square(array2, size);
         }
 
-        average_square(array2, array1, size);
+        for(int i = 0; i < num_threds; i++){
+            sections[i].array = array2;
+            sections[i].newarray = array1;
+            average_section(&sections[i]);
+        }
         k++;
         if(within_error(array2, array1, error_margin, size)){
             printf("%d iterations\n", k);
+            free(sections);
             return;
         }
 
@@ -129,6 +144,7 @@ void iterate(int num_threads, double *array1, double *array2, int size, double e
             print_square(array1, size);
         }
     }
+    free(sections);
 }
 
 
@@ -138,8 +154,8 @@ void random_array(double *to_fill, int MAX_VALUE, int size){
         for(int j = 0; j < size; j++){
             den = rand();
             den = den == 0? 1 : den;
-            num = (rand() % (den*MAX_VALUE));
-            to_fill[get_array_index(i, j, size)] = (double)num/(double)den;
+            num = (rand() % (MAX_VALUE));
+            to_fill[get_array_index(i, j, size)] = (double)num;
         }
     }
 }
@@ -175,15 +191,13 @@ void generate_tests(int num_threads, int num_tests, int MAX_VALUE, int size, dou
 
 int main(){
     srand(time(NULL));
-    int SIZE = 10;
+    int SIZE = 4;
     int MAX_VALUE = 100;
     int num_test = 1;
-    int num_threads = 2;
-    double error_margin = 0.001;
-    bool print_start_end = true;
+    int num_threads = 3;
+    double error_margin = 0.1;
     bool print_iterations = false;
-
-    printf("lets do this\n");
+    bool print_start_end = true;
 
     generate_tests(num_threads, num_test, MAX_VALUE, SIZE, error_margin, print_iterations, print_start_end);
 

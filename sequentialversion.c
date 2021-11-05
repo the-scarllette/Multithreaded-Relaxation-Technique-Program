@@ -1,7 +1,14 @@
-/*#include <stdio.h>
+/*
+#include <stdio.h>
 #include <stdbool.h>
 #include <malloc.h>
 #include <time.h>
+
+struct doublesArraySection{
+    int size;
+    double *array;
+    double *newarray;
+} doublesArraySection;
 
 int rand(void);
 void srand(unsigned int seed);
@@ -14,12 +21,13 @@ double average_value(double *array, int index, int size){
     return (array[index - 1] + array[index + 1] + array[index - size] + array[index + size])/4.0;
 }
 
-void average_square(double *array, double *new_array, int size){
+void* average_square(void *sectionaddress){
+    struct doublesArraySection *arraysection = sectionaddress;
     int index;
-    for(int i = 1; i < size - 1; i++){
-        for(int j = 1;j < size - 1; j++){
-            index = get_array_index(i, j, size);
-            new_array[index] = average_value(array, index, size);
+    for(int i = 1; i < (*arraysection).size - 1; i++){
+        for(int j = 1; j < (*arraysection).size - 1; j++){
+            index = get_array_index(i, j, (*arraysection).size);
+            (*arraysection).newarray[index] = average_value((*arraysection).array, index, (*arraysection).size);
         }
     }
 }
@@ -80,12 +88,16 @@ void iterate(double *array1, double *array2, int size, double error_margin, bool
 
     bool keep_iterating = true;
     int k = 0;
+    struct doublesArraySection arraySection;
+    arraySection.size = size;
     while(keep_iterating){
         if(k % 500 == 0){
             printf("iteration: %d\n", k);
         }
 
-        average_square(array1, array2, size);
+        arraySection.array = array1;
+        arraySection.newarray = array2;
+        average_square(&arraySection);
         k++;
         if(within_error(array1, array2, error_margin, size)){
             printf("%d iterations\n", k);
@@ -97,7 +109,9 @@ void iterate(double *array1, double *array2, int size, double error_margin, bool
             print_square(array2, size);
         }
 
-        average_square(array2, array1, size);
+        arraySection.array = array2;
+        arraySection.newarray = array1;
+        average_square(&arraySection);
         k++;
         if(within_error(array2, array1, error_margin, size)){
             printf("%d iterations\n", k);
