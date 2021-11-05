@@ -2,6 +2,9 @@
 #include <stdbool.h>
 #include <malloc.h>
 #include <time.h>
+#include <pthread.h>
+
+pthread_barrier_t   barrier;
 
 struct doublesArraySection{
     int size;
@@ -31,6 +34,7 @@ void* average_section(void *sectionaddress){
             (*arraySection).newarray[index] = average_value((*arraySection).array, index, (*arraySection).size);
         }
     }
+    pthread_barrier_wait (&barrier);
 }
 
 
@@ -98,27 +102,32 @@ void partition_array(struct doublesArraySection *sections, int num_sections, int
     }
 }
 
-void iterate(int num_threds, double *array1, double *array2, int size, double error_margin, bool print_iterations){
+void iterate(int num_threads, double *array1, double *array2, int size, double error_margin, bool print_iterations){
     copy_boundary(array1, array2, size);
 
     bool keep_iterating = true;
     int k = 0;
-    struct doublesArraySection *sections = malloc(num_threds*sizeof(doublesArraySection));
-    partition_array(sections, num_threds, size);
-    while(keep_iterating){
-        if(k % 500 == 0){
-            printf("iteration: %d\n", k);
-        }
 
-        for(int i = 0; i < num_threds; i++){
+    //Creating Threads
+    struct doublesArraySection *sections = malloc(num_threads*sizeof(doublesArraySection));
+    pthread_t *threads = malloc(num_threads*sizeof(pthread_t));
+    partition_array(sections, num_threads, size);
+
+
+    while(keep_iterating){
+
+        for(int i = 0; i < num_threads; i++){
             sections[i].array = array1;
             sections[i].newarray = array2;
-            average_section(&sections[i]);
+            pthread_create(&threads[i], NULL, average_section, (void*) &sections[i]);
         }
         k++;
         if(within_error(array1, array2, error_margin, size)){
             printf("%d iterations\n", k);
             free(sections);
+            for(int i = 0; i < num_threads; i++) {
+                pthread_join(threads[i], NULL);
+            }
             return;
         }
 
@@ -127,15 +136,18 @@ void iterate(int num_threds, double *array1, double *array2, int size, double er
             print_square(array2, size);
         }
 
-        for(int i = 0; i < num_threds; i++){
+        for(int i = 0; i < num_threads; i++){
             sections[i].array = array2;
             sections[i].newarray = array1;
-            average_section(&sections[i]);
+            pthread_create(&threads[i], NULL, average_section, (void*) &sections[i]);
         }
         k++;
         if(within_error(array2, array1, error_margin, size)){
             printf("%d iterations\n", k);
             free(sections);
+            for(int i = 0; i < num_threads; i++) {
+                pthread_join(threads[i], NULL);
+            }
             return;
         }
 
@@ -154,8 +166,8 @@ void random_array(double *to_fill, int MAX_VALUE, int size){
         for(int j = 0; j < size; j++){
             den = rand();
             den = den == 0? 1 : den;
-            num = (rand() % (MAX_VALUE));
-            to_fill[get_array_index(i, j, size)] = (double)num;
+            num = (rand() % (MAX_VALUE*den));
+            to_fill[get_array_index(i, j, size)] = ((double)num)/(double)den;
         }
     }
 }
@@ -163,6 +175,7 @@ void random_array(double *to_fill, int MAX_VALUE, int size){
 void generate_tests(int num_threads, int num_tests, int MAX_VALUE, int size, double error_margin, bool print_iterations, bool print_start_end){
     double *to_test;
     double *new_array;
+    long int start_time, end_time, run_time;
     for(int i = 0; i < num_tests; i++){
         to_test = malloc(size*size*sizeof(double));
         new_array = malloc(size*size*sizeof(double));
@@ -176,7 +189,12 @@ void generate_tests(int num_threads, int num_tests, int MAX_VALUE, int size, dou
             printf("\n");
         }
 
+        start_time = (long int)(time(NULL));
         iterate(num_threads, to_test, new_array, size, error_margin, print_iterations);
+        end_time = (long int)(time(NULL));
+        run_time = end_time - start_time;
+
+        printf("Took %d seconds to run", run_time);
 
         if(print_start_end) {
             printf("Iterated Array\n");
@@ -191,7 +209,7 @@ void generate_tests(int num_threads, int num_tests, int MAX_VALUE, int size, dou
 
 int main(){
     srand(time(NULL));
-    int SIZE = 4;
+    int SIZE = 100;
     int MAX_VALUE = 100;
     int num_test = 1;
     int num_threads = 3;
