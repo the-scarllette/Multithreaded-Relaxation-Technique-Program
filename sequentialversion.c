@@ -1,8 +1,8 @@
-/*
 #include <stdio.h>
 #include <stdbool.h>
 #include <malloc.h>
 #include <time.h>
+#include <math.h>
 
 struct doublesArraySection{
     int size;
@@ -61,20 +61,21 @@ void copy_boundary(double *array, double *new_array, int size){
 void print_square(double *to_print, int size){
     for(int i = 0; i < size; i++){
         for(int j = 0; j < size; j++){
-            printf("%.3f, ", to_print[size*i + j]);
+            printf("%.3f, ", to_print[get_array_index(i, j, size)]);
         }
         printf("\n");
     }
 }
 
 bool within_error(double *array, double *new_array, double error_margin, int size){
+    printf("Checking if Within Error");
     int index;
     double difference;
     for(int i = 1; i < size - 1; i++){
         for(int j = 1; j < size - 1; j++){
             index = get_array_index(i, j, size);
-            difference = (array[index]*array[index] - new_array[index]*new_array[index]);
-            if(difference*difference >= error_margin*error_margin){
+            difference = fabs(array[index] - new_array[index]);
+            if(difference >= error_margin){
                 return false;
             }
         }
@@ -91,10 +92,6 @@ void iterate(double *array1, double *array2, int size, double error_margin, bool
     struct doublesArraySection arraySection;
     arraySection.size = size;
     while(keep_iterating){
-        if(k % 500 == 0){
-            printf("iteration: %d\n", k);
-        }
-
         arraySection.array = array1;
         arraySection.newarray = array2;
         average_square(&arraySection);
@@ -138,14 +135,38 @@ void random_array(double *to_fill, int MAX_VALUE, int size){
     }
 }
 
-void generate_tests(int num_tests, int MAX_VALUE, int size, double error_margin, bool print_iterations, bool print_start_end){
-    double *to_test;
-    double *new_array;
+void load_test_cases(double *to_test, int size, int iteration){
+    double to_store = (double)(iteration + 1);
+    for(int i = 0; i < size; i++){
+        to_test[get_array_index(i, 0, size)] = to_store;
+        to_test[get_array_index(i, size - 1, size)] = to_store;
+    }
+
+    for(int j = 0; j < size; j++){
+        to_test[get_array_index(0, j, size)] = to_store;
+        to_test[get_array_index(size - 1, j, size)] = to_store;
+    }
+
+    for(int i = 1; i < size - 1; i++){
+        for(int j = 1; j < size - 1; j++){
+            to_test[get_array_index(i, j, size)] = 0.0;
+        }
+    }
+}
+
+void generate_tests(int num_tests, int MAX_VALUE, int size, double error_margin,
+                    bool use_random_array, bool print_iterations, bool print_start_end){
+    double *to_test, *new_array;
+    long int start_time, end_time, run_time;
     for(int i = 0; i < num_tests; i++){
         to_test = malloc(size*size*sizeof(double));
         new_array = malloc(size*size*sizeof(double));
 
-        random_array(to_test, MAX_VALUE, size);
+        if(use_random_array) {
+            random_array(to_test, MAX_VALUE, size);
+        }else{
+            load_test_cases(to_test, size, i);
+        }
 
         if(print_start_end) {
             printf("Test %d\n", i + 1);
@@ -154,7 +175,11 @@ void generate_tests(int num_tests, int MAX_VALUE, int size, double error_margin,
             printf("\n");
         }
 
+        start_time = (long int)(time(NULL));
         iterate(to_test, new_array, size, error_margin, print_iterations);
+        end_time = (long int)(time(NULL));
+        run_time = end_time - start_time;
+        printf("Took %d seconds to run\n", run_time);
 
         if(print_start_end) {
             printf("Iterated Array\n");
@@ -172,9 +197,14 @@ int main(){
     int SIZE = 10;
     int MAX_VALUE = 100;
     int num_test = 1;
-    double error_margin = 0.001;
+    double error_margin = 0.1;
+    bool print_iterations = true;
+    bool print_start_end = true;
 
-    generate_tests(num_test, MAX_VALUE, SIZE, error_margin, false, true);
+    bool use_random_array = false;
+
+    generate_tests(num_test, MAX_VALUE, SIZE, error_margin,
+                   use_random_array, print_iterations, print_start_end);
 
     return 0;
-}*/
+}
